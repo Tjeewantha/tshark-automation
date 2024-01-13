@@ -1,12 +1,12 @@
-# Papermark
+# Tshark-automation
 
-Papermark is an open-source document sharing alternative to DocSend with built-in analytics.
+Tshark-automation is a python script that can be used to analyze pcap_files.
 
-## Tshark-automation
+## Installation 
 
 First, clone this repository:
 
 <!-- start:code block -->
-#to get repo
+# insert this commad to your terminal
 git clone https://github.com/Tjeewantha/tshark-automation
 <!-- end:code block -->
