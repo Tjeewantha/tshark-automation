@@ -22,10 +22,10 @@ def tshark_exec(cmd, pcap):
         return str(error)
     else:
         k = re.split('\n', output)[:-2]
-        return k           
+        return k        
 
 udp = ['-Y', 'udp']
-tcp = ['-Y', 'tcp']   
+tcp = ['-Y', 'tcp']
 def all_protocols(proto):
     protocols = []
     for i in tshark_exec(proto, file):
@@ -34,6 +34,35 @@ def all_protocols(proto):
             protocols.append(temp)
     return protocols
 
-print(all_protocols(tcp))
-print(all_protocols(udp))
+'''
+Adversaries can spoof an authoritative source for name resolution on a victim network by responding to 
+LLMNR (UDP 5355)/NBT-NS (UDP 137) traffic as if they know the identity of the requested host
+'''   
+def ms_dns_info(): #sw = llmnr/netbios
+    l = ('llmnr', 'nbns')
+    for i in l:
+        if i.upper() in all_protocols(udp):
+            print("-"*50, 'IPv4-',i.upper(),"-"*50)
+            cmd = ['-Y', i + '&& (dns.retransmission == True)', '-T', 'fields', '-e', 'ip.src', '-e', 'udp.srcport', '-e', 'ip.dst',
+                    '-e', 'udp.dstport','-e','dns.count.queries', '-e', 'dns.qry.name', '-e', 'dns.count.answers', '-E', 'header=y']
+            process = tshark_exec(cmd, file)
+            for j in process:
+                if j[0] == '\t':
+                    process.remove(j)
+                else:
+                    print(j)
+            print("-"*50, 'IPv6-',i.upper(),"-"*50)
+            cmd = ['-Y', i + '&& (dns.retransmission == True)', '-T', 'fields', '-e', 'ipv6.src', '-e', 'udp.srcport', '-e', 'ip.dst',
+                    '-e', 'udp.dstport','-e','dns.count.queries', '-e', 'dns.qry.name', '-e', 'dns.count.answers', '-E', 'header=y']
+            process = tshark_exec(cmd, file)
+            for k in process:
+                if k[0] == '\t':
+                    process.remove(k)
+                else:
+                    print(k)
+        else:
+            print(f"{i.upper()} not found in {file}")
+
+
+ms_dns_info()
          
