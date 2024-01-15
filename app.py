@@ -4,6 +4,8 @@ import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
 import re
+from prettytable import PrettyTable
+
 
 def parser():
     parser = ArgumentParser()
@@ -38,31 +40,39 @@ def all_protocols(proto):
 Adversaries can spoof an authoritative source for name resolution on a victim network by responding to 
 LLMNR (UDP 5355)/NBT-NS (UDP 137) traffic as if they know the identity of the requested host
 '''   
-def ms_dns_info(): #sw = llmnr/netbios
-    l = ('llmnr', 'nbns')
+def ms_dns_info(): #switch between llmnr/netbios
+    l = ('llmnr', 'nbns')  
     for i in l:
         if i.upper() in all_protocols(udp):
-            print("-"*50, 'IPv4-',i.upper(),"-"*50)
-            cmd = ['-Y', i + '&& (dns.retransmission == True)', '-T', 'fields', '-e', 'ip.src', '-e', 'udp.srcport', '-e', 'ip.dst',
-                    '-e', 'udp.dstport','-e','dns.count.queries', '-e', 'dns.qry.name', '-e', 'dns.count.answers', '-E', 'header=y']
-            process = tshark_exec(cmd, file)
-            for j in process:
-                if j[0] == '\t':
-                    process.remove(j)
-                else:
-                    print(j)
-            print("-"*50, 'IPv6-',i.upper(),"-"*50)
-            cmd = ['-Y', i + '&& (dns.retransmission == True)', '-T', 'fields', '-e', 'ipv6.src', '-e', 'udp.srcport', '-e', 'ip.dst',
-                    '-e', 'udp.dstport','-e','dns.count.queries', '-e', 'dns.qry.name', '-e', 'dns.count.answers', '-E', 'header=y']
-            process = tshark_exec(cmd, file)
-            for k in process:
-                if k[0] == '\t':
-                    process.remove(k)
-                else:
-                    print(k)
+            for sw in ('ip','ipv6'):
+                lists = []
+                print("-"*50, sw,'-',i.upper(),"-"*50)
+                # if you add a field to cmd, remember to update prettytable fields
+                t = PrettyTable(['Src_Add', 'Src_Port', 'Dst_Add', 'Dst_Port', 'Is_Query','Query_Name'])
+                cmd0 = ['-Y', i + '&& (dns.retransmission == True)', '-T', 'fields', '-e', sw+'.src', '-e', 'udp.srcport', '-e', 'ip.dst',
+                    '-e', sw+'.dst','-e', 'udp.dstport','-e','dns.count.queries', '-e', 'dns.qry.name']
+                cmd1 =[]
+                process = tshark_exec(cmd0, file)
+                for j in process:
+                    k = re.split('\s+', j)
+                    if j[0] == '\t':
+                        process.remove(j)
+                    elif k[4] == '0':
+                        process.remove(j)
+                    else:
+                        lists.append(k)
+                t.add_rows(lists)
+                print(t)
+                # src_add, dst_add = set()
+
+                # for list in lists:
+                #     src_add.add(list[0])
+                #     dst_add.add(list[2])
+                # print(src_add, dst_add)
+                lists = [] # to refresh exsisting list to empty   
         else:
             print(f"{i.upper()} not found in {file}")
 
-
+# another request table should be added    
 ms_dns_info()
-         
+
